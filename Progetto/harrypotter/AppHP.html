@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="it" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8">
+    <title>Harry Potter's World</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.0.2/dist/vue.global.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="http://fonts.cdnfonts.com/css/harry-potter" rel="stylesheet">
+    <style>
+    @import url('http://fonts.cdnfonts.com/css/harry-potter');
+    </style>
+</head>
+<style>
+    body {
+        
+        font-family: 'Harry Potter', sans-serif;
+        font-size: 18px;
+        background-image: url("wallpHP.jpg");
+        background-color: #cccccc;
+       
+
+    }
+
+    /* Trucchi con le proprietà flex per centrare il contenuto di un div */
+    #centeredContent {
+        width: 450px;
+        min-width: 450px;
+        flex: 0 1 auto;
+    }
+
+    #leftSpacer {
+        flex: 1 1 auto;
+    }
+
+    #rightSpacer {
+        flex: 1 1 0;
+    }
+</style>
+<body>
+
+<header 
+        class="container-fluid mb-3">
+    <div class="d-flex flex-column align-items-center p-3">
+        <img src="logo hpotte.png" alt="logo Harry Potter" style="width: 10%;">
+        <a style="color: rgb(255, 195, 0); text-shadow: 4px 4px rgb(7, 7, 7); font-size: 300%;" class="text-decoration-none"
+           href="index.html">
+            Harry Potter's World
+        </a>
+    </div>
+</header>
+<div class="container">
+    <article id="app" class="d-flex">
+        <div id="leftSpacer"></div>
+        <div id="centeredContent">
+            <h1 style="text-align: center">
+                Ciao Babbano, cosa vuoi scoprire?
+            </h1>
+            <div class="d-flex flex-row align-items-center">
+                <select @change="loadRequiredData" v-model="action" class="form-select" aria-label="Selezione azione"
+                        style="overflow: hidden; text-overflow: ellipsis">
+                    <option selected value="0">Bestie di...</option>
+                    <option value="1">Pericolosità di...</option>
+                    <option value="2">Componenti di...</option>
+                    <option value="3">Nemici di...</option>
+                    <option value="4">Tutti i modi in cui è chiamato...</option>
+                    <option value="5">Informazioni (no spoiler) su...</option>
+                    <option value="6">Informazioni (spoiler) su...</option>
+                    <option value="7"> I ruoli che ha...</option>
+                    <option value="8">Tutti i membri della famiglia...</option>
+                    <option value="9">Voglio vedere di più sul patronus di...</option>
+                
+                </select>
+
+                <select @change="runQuery" v-model="secondSelection" class="form-select m-2">
+                    <option v-for="est in names" :value="est">{{est}}</option>
+                </select>
+
+                <!-- Sto usando il doppio = perchè il === NON FUNZIONA! -->
+                
+            </div>
+            <div v-if="result != null && result.rows.length > 0">
+                <table class="table table-striped table-hover">
+                    <thead>
+                    <tr>
+                        <th v-for="title in result.titles" scope="col">{{title}}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="row in result.rows">
+                        <td v-for="el in row">{{el}}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div v-else-if="result != null && result.rows.length == 0" class="text-danger fs-3">
+                Nessun risultato.
+            </div>
+            <div v-else-if="secondSelection != ''" class="spinner-border" role="status"></div>
+            <div v-else style="color: #FFB900; text-align: center">
+                ✱ Seleziona il secondo campo!
+            </div>
+        </div>
+        <div id="rightSpacer"></div>
+    </article>
+    <footer>
+        <div style="text-align: center; opacity: 0.5; margin-top: 12%">
+            Copyright &copy; 2022
+        </div>
+    </footer>
+</div>
+</body>
+</html>
+<script>
+    Vue.createApp({
+        data() {
+            return {
+                action: 0,
+                names: [],
+                secondSelection: '',
+                result: null
+            }
+        },
+        mounted() {
+            this.loadRequiredData();
+        },
+        methods: {
+            runQuery() {
+                if (this.secondSelection === '') {
+                    console.log("NO SELECTION");
+                    return;
+                }
+
+                this.result = null;
+
+                // Necessario per referenziare vue negli oggetti annidati
+                const vue = this;
+                let query = '';
+
+                // Ricerca tutte le bestie di selezionato
+                if (this.action == 0) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                        
+                            PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                            
+                            SELECT DISTINCT ?bestia?specie
+	                        WHERE { ?be hp:haProprietario ?m;
+                                    rdfs:label ?bestia;
+		                hp:specie ?specie.
+		                ?m rdfs:label ?n
+		                FILTER regex(?n, "${this.secondSelection}").
+                        FILTER ( lang(?bestia) = "ita").
+		                    
+		                    }`;
+                }
+
+                // Restituisce la pericolosità di selezionata
+                if (this.action == 1) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                             PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                    
+
+                            SELECT ?pericolosità WHERE {
+                                ?b hp:pericolosità ?pericolosità;
+                                rdfs:label ?l.
+                                FILTER regex (?l, "${this.secondSelection}").
+                                FILTER (lang(?l) = "ita")
+                            }`;
+                }
+
+                // Restituisce tutti i membri di selezionata
+                if (this.action == 2) {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                    PREFIX owl: <http://www.ontologydesignpatterns.org/cp/owl/collectionentity.owl#>
+
+                            SELECT ?componente WHERE{
+                                
+                            ?lc  owl:isMemberOf ?c;
+                            rdfs:label ?componente.
+                            ?c rdfs:label ?l.
+                            FILTER regex (?l, "${this.secondSelection}").
+                            FILTER (lang(?componente) = "ita").
+                                
+                                 }`;
+                }
+                // Restituisce nemici di selezionato
+                if(this.action == 3) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                             PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                             PREFIX rel: <http://purl.org/vocab/relationship/>
+                             SELECT  DISTINCT ?nemici
+	                         WHERE { 
+	                         {?p rel:enemyOf ?v.} UNION
+	                         {?p hp:vuoleUccidere ?v.}
+                             ?p rdfs:label ?nemici.
+	                         ?v rdfs:label ?n.
+	                         FILTER regex(?n, "${this.secondSelection}")
+                             FILTER ( lang(?nemici) = "ita" ) 
+	                        }`;
+                }
+                //Restituisce tutti i nomi con cui viene menzionato selezionato
+                if(this.action == 4) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                             PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+                             SELECT  ?è_chiamato (lang(?è_chiamato) as ?in_lingua)
+	                         WHERE { 
+	                        {?z skos:altLabel ?è_chiamato.} UNION
+                            {?z rdfs:label ?è_chiamato.}
+	                        ?z rdfs:label ?n.
+	                        FILTER regex(?n, "${this.secondSelection}").
+                            FILTER (lang(?n) = "ita")
+                            }`;
+                }
+                //Restituisce info su selezionato
+                if(this.action == 5) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                             PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                             PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+                             PREFIX xml: <http://www.w3.org/XML/1998/namespace>
+                             SELECT DISTINCT ?è_un
+	                         WHERE { 
+                             ?p a ?c;
+	                         rdfs:label ?n.
+                             ?c rdfs:label ?è_un.
+	                         FILTER regex(?n, "${this.secondSelection}").
+	                         FILTER(?c != owl:NamedIndividual)
+                             FILTER (lang(?è_un) = "ita")
+                            }`;
+                }
+                //Restituisce info da wikidata su selezionato
+                if(this.action == 6) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                             PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                            SELECT ?luogo_di_morte ?data_di_morte ?causa_di_morte ?ucciso_da
+                            WHERE { 
+                            SERVICE <https://query.wikidata.org/sparql>{
+                            ?en rdfs:label ?l;
+                            wdt:P20 ?luogo_di_morte;
+                            wdt:P570 ?data_di_morte;
+                            wdt:P157 ?ucciso_da;
+                            wdt:P509 ?causa_di_morte.
+                            
+                            FILTER regex(?l, "${this.secondSelection}").
+                            FILTER(lang(?l) = "it")
+                            
+                        }
+                    }`;
+                }
+                //Restituisce tutti i ruoli di selezionato
+                if(this.action == 7) {
+                    query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                            PREFIX objectrole: <http://www.ontologydesignpatterns.org/cp/owl/objectrole.owl#>
+                             SELECT ?ruolo
+	                         WHERE { 
+                                 ?t objectrole:hasRole ?r;
+                                 rdfs:label ?personaggio.
+                                 ?r rdfs:label ?ruolo.
+                                 FILTER regex(?personaggio, "${this.secondSelection}")
+                                FILTER (lang(?personaggio) = "ita")
+                                 FILTER(lang(?ruolo) = "ita")
+
+	                    }`;
+                }
+                //Tutti i membri della famiglia selezionata 
+                if(this.action == 8) {
+                    query = `PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                            SELECT  ?componente
+	                        WHERE { 
+	                        ?c foaf:surname ?w;
+                            rdfs:label ?componente.
+                            FILTER regex(?w, "${this.secondSelection}")
+                            FILTER(lang(?componente) = "ita")
+	                    }`;
+                }
+                //Foto patronus di selezionato
+                if(this.action ==9) {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                            PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                            SELECT ?img
+	                        WHERE { 
+		                    ?m hp:haPatronus ?p;
+                            rdfs:label ?l.
+    	                    ?p hp:speciePatronus ?s.
+                            SERVICE <https://query.wikidata.org/sparql> {
+                                ?en wdt:P225 ?s;
+                                wdt:P18 ?img
+                            } FILTER regex (?l, "${this.secondSelection}" )
+                            FILTER(lang(?l) = "ita")
+	
+	                    }`;
+                }
+             
+
+                // Effettua un'unica richiesta AJAX
+                $.ajax({
+                    url: "http://LAPTOP-L9FD1QGK:7200/repositories/HarryPotter",
+                    type: "get",
+                    dataType: "text",
+                    data: {
+                        query: query
+                    },
+                    // Questo è possibile perchè il metodo che converte da CSV si adatta al numero di colonne restituite
+                    success: function (result) {
+                        console.log(result);
+
+                        // Versione migliorata, utilizza una regex per recuperare correttamente le colonne.
+                        // In questo modo non vengono create più colonne se per caso ci sono delle virgole nel testo.
+                        // https://stackoverflow.com/a/52978163/3560579
+                        const csv2array = (str) => {
+                            const lineRegex = /((\\\n)|[^\n])+/g;
+                            const datumRegex = /,?(("(\\"|.)+?")|([^",][^,]*))?/g;
+                            const array2d = str.match(lineRegex).map((row) =>
+                                row.match(datumRegex).map((datum) => datum.replace(/^,?"?|"$/g, "").trim()),
+                            );
+
+                            const titles = array2d[0];
+                            const rows = array2d.slice(1);
+
+                            return {titles, rows}
+                        }
+
+                        let data = csv2array(result);
+                        // Rimuovo l'ultima riga perchè contiene valori vuoti restituiti da GraphDB
+                        data.rows = data.rows.filter(row => row[0] !== '');
+
+                        console.log(data);
+                        vue.result = data;
+                    }
+                });
+
+
+            },
+            loadRequiredData() {
+                const vue = this;
+
+                let query = '';
+
+                if (this.action == 0 || this.action == 3 || this.action == 6) {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                    SELECT ?e
+                    WHERE {
+                        ?m a hp:Essere;
+                        rdfs:label ?e.
+                        FILTER ( lang(?e) = "ita" ) 
+                        
+                    }`;
+                } else if (this.action == 1) {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+
+                    SELECT ?e
+                    WHERE {
+                        ?m a hp:BestiaMagica;
+                        rdfs:label ?e.
+                        FILTER ( lang(?e) = "ita" ) 
+                        
+                    }`;
+                } else if(this.action == 2) {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                    PREFIX owl: <http://www.ontologydesignpatterns.org/cp/owl/communities.owl#>
+
+                    SELECT ?e
+                    WHERE {
+                        ?m a owl:Community;
+                        rdfs:label ?e.
+                        FILTER ( lang(?e) = "ita" ) 
+    
+                    }`;
+                } else if(this.action == 4 || this.action == 5 || this.action == 7){
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+
+                    SELECT ?e
+                    WHERE {
+                    ?m a hp:Personaggio;
+                    rdfs:label ?e.
+                    FILTER ( lang(?e) = "ita" ) 
+    
+                    }`;
+                } else if (this.action == 8) {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                    SELECT ?s
+                    WHERE {
+                    ?m foaf:surname ?s.
+    
+                    }
+                    GROUP BY ?s`;
+                } else {
+                    query = `PREFIX hp: <http://www.semanticweb.org/39345/ontologies/2022/3/harryPotter#>
+                   
+                    SELECT ?l
+                    WHERE {
+                    ?s a hp:Mago;
+                    rdfs:label ?l.
+                    FILTER(lang(?l) = "ita")
+                    }`
+                }
+
+                $.ajax({
+                    url: "http://LAPTOP-L9FD1QGK:7200/repositories/HarryPotter",
+                    type: 'get',
+                    dataType: "text",
+                    data: {
+                        query: query
+                    },
+                    success: function (result) {
+                        const arr = result.split(/\r?\n/);
+                        vue.names = arr.slice(1, arr.length - 1);
+                    }
+                });
+
+                // necessario se dobbiamo caricare dei valori di un'altra query ma con lo stesso soggetto
+                this.runQuery();
+            }
+        }
+    }).mount('#app');
+</script>
